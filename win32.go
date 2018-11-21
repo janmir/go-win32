@@ -46,6 +46,7 @@ type Win32 struct {
 	setForegroundWindow         uintptr
 	findWindowA                 uintptr
 	findWindowExW               uintptr
+	setWindowLongW              uintptr
 
 	//Kernel 32
 	getModuleHandle  uintptr
@@ -97,6 +98,7 @@ func New() Win32 {
 		setForegroundWindow:         MustGetProcAddress(user32, "SetForegroundWindow"),
 		findWindowA:                 MustGetProcAddress(user32, "FindWindowA"),
 		findWindowExW:               MustGetProcAddress(user32, "FindWindowExW"),
+		setWindowLongW:              MustGetProcAddress(user32, "SetWindowLongW"),
 
 		//Kernel 32
 		getModuleHandle:  MustGetProcAddress(kernel32, "GetModuleHandleW"),
@@ -640,4 +642,14 @@ func (win Win32) FindWindowExW(hwndParent, hwndChildAfter HWND, className, windo
 	}
 
 	return HWND(ret)
+}
+
+//SetWindowLong ...
+func (win Win32) SetWindowLong(hwnd HWND, index int, value uint32) uint32 {
+	ret, _, _ := syscall.Syscall(win.setWindowLongW, 3,
+		uintptr(hwnd),
+		uintptr(index),
+		uintptr(value))
+
+	return uint32(ret)
 }
