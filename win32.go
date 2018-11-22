@@ -47,6 +47,7 @@ type Win32 struct {
 	findWindowA                 uintptr
 	findWindowExW               uintptr
 	setWindowLongW              uintptr
+	getSystemMetrics            uintptr
 
 	//Kernel 32
 	getModuleHandle  uintptr
@@ -99,6 +100,7 @@ func New() Win32 {
 		findWindowA:                 MustGetProcAddress(user32, "FindWindowA"),
 		findWindowExW:               MustGetProcAddress(user32, "FindWindowExW"),
 		setWindowLongW:              MustGetProcAddress(user32, "SetWindowLongW"),
+		getSystemMetrics:            MustGetProcAddress(user32, "GetSystemMetrics"),
 
 		//Kernel 32
 		getModuleHandle:  MustGetProcAddress(kernel32, "GetModuleHandleW"),
@@ -644,7 +646,9 @@ func (win Win32) FindWindowExW(hwndParent, hwndChildAfter HWND, className, windo
 	return HWND(ret)
 }
 
-//SetWindowLong ...
+//SetWindowLong Changes an attribute of the specified window.
+//The function also sets the 32-bit (long) value at the specified
+//offset into the extra window memory.
 func (win Win32) SetWindowLong(hwnd HWND, index int, value uint32) uint32 {
 	ret, _, _ := syscall.Syscall(win.setWindowLongW, 3,
 		uintptr(hwnd),
@@ -652,4 +656,15 @@ func (win Win32) SetWindowLong(hwnd HWND, index int, value uint32) uint32 {
 		uintptr(value))
 
 	return uint32(ret)
+}
+
+//GetSystemMetrics Retrieves the specified system metric or system configuration setting.
+//Note that all dimensions retrieved by GetSystemMetrics are in pixels.
+func (win Win32) GetSystemMetrics(nIndex int32) int32 {
+	ret, _, _ := syscall.Syscall(win.getSystemMetrics, 1,
+		uintptr(nIndex),
+		0,
+		0)
+
+	return int32(ret)
 }
