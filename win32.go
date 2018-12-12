@@ -48,6 +48,10 @@ type Win32 struct {
 	findWindowExW               uintptr
 	setWindowLongW              uintptr
 	getSystemMetrics            uintptr
+	setWindowsHookExW           uintptr
+	unhookWindowsHookEx         uintptr
+	callNextHookEx              uintptr
+	getWindowLong               uintptr
 
 	//Kernel 32
 	getModuleHandle  uintptr
@@ -101,6 +105,10 @@ func New() Win32 {
 		findWindowExW:               MustGetProcAddress(user32, "FindWindowExW"),
 		setWindowLongW:              MustGetProcAddress(user32, "SetWindowLongW"),
 		getSystemMetrics:            MustGetProcAddress(user32, "GetSystemMetrics"),
+		setWindowsHookExW:           MustGetProcAddress(user32, "SetWindowsHookExW"),
+		unhookWindowsHookEx:         MustGetProcAddress(user32, "UnhookWindowsHookEx"),
+		callNextHookEx:              MustGetProcAddress(user32, "CallNextHookEx"),
+		getWindowLong:               MustGetProcAddress(user32, "GetWindowLongW"),
 
 		//Kernel 32
 		getModuleHandle:  MustGetProcAddress(kernel32, "GetModuleHandleW"),
@@ -154,7 +162,9 @@ func (win Win32) GetWindowText(hWnd HWND) string {
 		uintptr(int32(ll)))
 
 	if err != 0 {
-		util.Catch(fmt.Errorf("error: %d", err))
+		// util.Catch(fmt.Errorf("error: %d", err))
+		util.Logger("GetWindowText error: %d", err)
+		return ""
 	}
 	_ = len
 	return UintToString(text)
@@ -251,7 +261,8 @@ func (win Win32) SendInput(nInputs int, pInputs unsafe.Pointer, cbSize uintptr) 
 		cbSize)
 
 	if err > 5 {
-		util.Catch(fmt.Errorf("error: %d", err))
+		// util.Catch(fmt.Errorf("error: %d", err))
+		util.Logger("SendInput error: %d", err)
 	}
 
 	return uint32(ret)
@@ -664,6 +675,62 @@ func (win Win32) GetSystemMetrics(nIndex int32) int32 {
 	ret, _, _ := syscall.Syscall(win.getSystemMetrics, 1,
 		uintptr(nIndex),
 		0,
+		0)
+
+	return int32(ret)
+}
+
+//SetWindowsHookExW Installs an application-defined hook procedure into a hook chain.
+//You would install a hook procedure to monitor the system for certain types of events.
+//These events are associated either with a specific thread or with all threads in the
+//same desktop as the calling thread.
+func (win Win32) SetWindowsHookExW(event int, winEventCallback HOOKPROC3, hMod HINSTANCE, idThread uint32) HHOOK {
+	ret, _, err := syscall.Syscall6(win.setWindowsHookExW, 4,
+		uintptr(event),
+		uintptr(syscall.NewCallback(winEventCallback)),
+		uintptr(hMod),
+		uintptr(idThread),
+		0, 0)
+	if err != 0 {
+		// util.Logger(fmt.Errorf("error: %d", err))
+		util.Catch(fmt.Errorf("error: %d", err))
+	}
+	return HHOOK(ret)
+}
+
+//UnhookWindowsHookEx Removes a hook procedure installed in a
+//hook chain by the SetWindowsHookEx function.
+func (win Win32) UnhookWindowsHookEx(hhk HHOOK) bool {
+	ret, _, _ := syscall.Syscall(win.unhookWindowsHookEx, 1,
+		uintptr(hhk),
+		0,
+		0)
+
+	return ret != 0
+}
+
+//CallNextHookEx Passes the hook information to the next hook
+//procedure in the current hook chain. A hook procedure can call
+//this function either before or after processing the hook information.
+func (win Win32) CallNextHookEx(hhk HHOOK, nCode int, wParam, lParam uintptr) LRESULT {
+	ret, _, err := syscall.Syscall6(win.callNextHookEx, 4,
+		uintptr(hhk),
+		uintptr(nCode),
+		uintptr(wParam),
+		uintptr(lParam),
+		0, 0)
+	if err != 0 {
+		// util.Logger(fmt.Errorf("error: %d", err))
+		util.Catch(fmt.Errorf("error: %d", err))
+	}
+	return LRESULT(ret)
+}
+
+//GetWindowLong Retrieves information about the specified window.
+func (win Win32) GetWindowLong(hWnd HWND, index int32) int32 {
+	ret, _, _ := syscall.Syscall(win.getWindowLong, 2,
+		uintptr(hWnd),
+		uintptr(index),
 		0)
 
 	return int32(ret)
