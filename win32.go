@@ -52,6 +52,8 @@ type Win32 struct {
 	unhookWindowsHookEx         uintptr
 	callNextHookEx              uintptr
 	getWindowLong               uintptr
+	getKeyState                 uintptr
+	mapVirtualKeyExW            uintptr
 
 	//Kernel 32
 	getModuleHandle  uintptr
@@ -109,6 +111,8 @@ func New() Win32 {
 		unhookWindowsHookEx:         MustGetProcAddress(user32, "UnhookWindowsHookEx"),
 		callNextHookEx:              MustGetProcAddress(user32, "CallNextHookEx"),
 		getWindowLong:               MustGetProcAddress(user32, "GetWindowLongW"),
+		getKeyState:                 MustGetProcAddress(user32, "GetKeyState"),
+		mapVirtualKeyExW:            MustGetProcAddress(user32, "MapVirtualKeyExW"),
 
 		//Kernel 32
 		getModuleHandle:  MustGetProcAddress(kernel32, "GetModuleHandleW"),
@@ -734,4 +738,27 @@ func (win Win32) GetWindowLong(hWnd HWND, index int32) int32 {
 		0)
 
 	return int32(ret)
+}
+
+//GetKeyState Retrieves the status of the specified virtual key.
+//The status specifies whether the key is up, down, or toggled
+//(on, off—alternating each time the key is pressed).
+func (win Win32) GetKeyState(nVirtKey int32) int16 {
+	ret, _, _ := syscall.Syscall(win.getKeyState, 1,
+		uintptr(nVirtKey),
+		0,
+		0)
+
+	return int16(ret)
+}
+
+//MapVirtualKeyExW Translates (maps) a virtual-key code into a scan code or character
+//value, or translates a scan code into a virtual-key code.
+//To specify a handle to the keyboard layout to use for translating the specified code, use the MapVirtualKeyEx function.
+func (win Win32) MapVirtualKeyExW(uCode, uMapType int, dwhkl HKL) int {
+	ret, _, _ := syscall.Syscall(win.mapVirtualKeyExW, 3,
+		uintptr(uCode),
+		uintptr(uMapType),
+		uintptr(dwhkl))
+	return int(ret)
 }
